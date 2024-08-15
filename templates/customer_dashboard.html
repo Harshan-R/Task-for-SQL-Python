@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Customer Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <script>
+      function updateTotalPrice() {
+        var table = document.querySelector("table");
+        var rows = table.querySelectorAll("tbody tr");
+        rows.forEach((row) => {
+          var price = parseFloat(
+            row.querySelector("input[name$='price']").value
+          );
+          var quantity =
+            parseInt(row.querySelector("input[name$='quantity']").value) || 0;
+          var totalPrice = price * quantity;
+          row.querySelector(".total-price").textContent = totalPrice.toFixed(2);
+        });
+      }
+
+      function handleCheckout(event) {
+        event.preventDefault(); // Prevent default form submission
+
+        var form = event.target;
+        var formData = new FormData(form);
+        var xhr = new XMLHttpRequest();
+
+        xhr.open("POST", "/checkout", true);
+        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+        xhr.onload = function () {
+          if (xhr.status === 200) {
+            var response = JSON.parse(xhr.responseText);
+            if (response.success) {
+              alert("Checkout successful!");
+              location.reload(); // Refresh page to reflect changes
+            } else {
+              alert("Checkout failed: " + response.message);
+            }
+          }
+        };
+        xhr.send(formData);
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        var quantityInputs = document.querySelectorAll(
+          "input[name$='quantity']"
+        );
+        quantityInputs.forEach((input) => {
+          input.addEventListener("input", updateTotalPrice);
+        });
+
+        var checkoutForm = document.querySelector("form");
+        checkoutForm.addEventListener("submit", handleCheckout);
+      });
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>Pi Stock</h1>
+      <h2>Customer Dashboard</h2>
+    </header>
+    <main>
+      <section>
+        <h2>Product List</h2>
+        <form action="/checkout" method="post">
+          <table>
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Price</th>
+                <th>Stock</th>
+                <th>Quantity</th>
+                <th>Total Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in products %}
+              <tr>
+                <td>{{ product.product_name }}</td>
+                <td>Rs.{{ product.price }}</td>
+                <td>{{ product.stock_quantity }}</td>
+                <td>
+                  <input
+                    type="number"
+                    name="cart_items[{{ loop.index0 }}][quantity]"
+                    min="1"
+                    max="{{ product.stock_quantity }}"
+                    value="0"
+                  />
+                </td>
+                <td>Rs.<span class="total-price">0.00</span></td>
+                <input
+                  type="hidden"
+                  name="cart_items[{{ loop.index0 }}][product_id]"
+                  value="{{ product.product_id }}"
+                />
+                <input
+                  type="hidden"
+                  name="cart_items[{{ loop.index0 }}][price]"
+                  value="{{ product.price }}"
+                />
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <button type="submit">Checkout</button>
+        </form>
+      </section>
+      <footer>
+        <a href="/logout">Logout</a>
+      </footer>
+    </main>
+  </body>
+</html>
